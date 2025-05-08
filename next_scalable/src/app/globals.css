@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+.main-signIn{
+   background-image: url(../../public/background.svg);
+   background-size: cover;
+   background-position: center;
+}
