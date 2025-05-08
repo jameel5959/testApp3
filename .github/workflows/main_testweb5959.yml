@@ -11,25 +11,34 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  # Changed from windows-latest for better Node.js compatibility
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify repository files
+        run: ls -la  # Helps debug file structure issues
+
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '20.x'  # Changed from 22.x to match your app
 
-      - name: npm install, build, and test
-        run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./  # Explicitly sets root directory
+
+      - name: Build application
+        run: npm run build --if-present
+        working-directory: ./
+
+      - name: Run tests
+        run: npm run test --if-present
+        working-directory: ./
       
-      - name: Upload artifact for deployment job
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: node-app
@@ -42,27 +51,26 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
-      - name: Download artifact from build job
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_816014FFE3754FF6815D51A493BAE662 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B1C1D34ACC6B4DECABF021BD7A731AD0 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0BFA91EEDDEF4BBC98FE00DEA730D719 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C36BCE134B0D40B68474BE736C96D9BF }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8BAFD76A75DB4716A7F8A7658D6EF40F }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1F0BF8EFFCBD4EEA8A3A3A89F29CED55 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'testweb5959'
           slot-name: 'Production'
-          package: .
-          
+          package: ./
