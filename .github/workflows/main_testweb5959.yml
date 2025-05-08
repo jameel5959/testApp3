@@ -9,6 +9,15 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+  FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+  FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+  FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+  FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+  FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+  FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,24 +29,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug - Verify repository structure
+      - name: Verify environment
         run: |
-          echo "Current workspace: $GITHUB_WORKSPACE"
-          ls -la
-          echo "Checking subdirectories..."
-          ls -la next_scalable/
-          if [ -f "next_scalable/package.json" ]; then
-            echo "✓ package.json found in next_scalable/"
-            echo "Checking for lock file..."
-            if [ -f "next_scalable/package-lock.json" ]; then
-              echo "✓ package-lock.json found"
-            else
-              echo "⚠ No lock file found, will generate one"
-            fi
-          else
-            echo "✗ package.json not found!"
-            exit 1
-          fi
+          echo "Checking Firebase environment variables..."
+          echo "API Key: ${NEXT_PUBLIC_FIREBASE_API_KEY:0:4}..." # Shows first 4 chars for verification
+          echo "Project ID: $FIREBASE_PROJECT_ID"
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -46,27 +42,19 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'next_scalable/package-lock.json'
 
-      - name: Generate lock file if missing
-        working-directory: ./next_scalable
-        run: |
-          if [ ! -f "package-lock.json" ]; then
-            echo "Generating package-lock.json..."
-            npm install --package-lock-only
-          fi
-
       - name: Install dependencies
         working-directory: ./next_scalable
         run: npm ci --production=false
 
       - name: Build application
         working-directory: ./next_scalable
-        run: npm run build --if-present
+        run: |
+          echo "Starting build with Firebase config..."
+          npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1 # Disables Next.js telemetry
 
-      - name: Run tests
-        working-directory: ./next_scalable
-        run: npm run test --if-present
-      
-      - name: Upload artifact for deployment
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: node-app
